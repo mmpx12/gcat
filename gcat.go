@@ -12,7 +12,7 @@ import (
 	"github.com/mmpx12/optionparser"
 )
 
-const version = "v1.0.0"
+const version = "v1.0.1"
 
 func ListFunctions(file string, disableSyntax bool) {
 	f, _ := os.ReadFile(file)
@@ -109,6 +109,7 @@ options:`
 
 	if !list && !listtype && cat == "" && method == "" {
 		op.Help()
+		os.Exit(1)
 	}
 
 	if len(op.Extra) == 0 || op.Extra[0] == "." || op.Extra[0] == "*" {
