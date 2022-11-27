@@ -14,56 +14,33 @@ import (
 
 const version = "v1.0.1"
 
-func ListFunctions(file string, disableSyntax bool) {
-	f, _ := os.ReadFile(file)
-	c, _ := format.Source(f)
+var DisableSyntax bool
+
+func ListFunctions(file string) {
 	var re = regexp.MustCompile(`(?m)^func.*?{$`)
-	for _, match := range re.FindAllString(string(c), -1) {
-		if !disableSyntax {
-			quick.Highlight(os.Stdout, match+"}\n", "go", "terminal256", "monokai")
-		} else {
-			fmt.Println(match)
-		}
+	for _, match := range re.FindAllString(file, -1) {
+		PrintRes(match + "}\n")
 	}
 }
 
-func CatFunction(funcName, file string, disableSyntax bool) {
-	f, _ := os.ReadFile(file)
-	c, _ := format.Source(f)
-	//var re = regexp.MustCompile(`(?ms)^func.*` + Fname + `.*?{\n.*?^}(\s+?)$`)
+func CatFunction(funcName, file string) {
 	var re = regexp.MustCompile(`(?ms)^func (\([A-Za-z0-9_]+.*?\)[ |\t])?` + funcName + `.*?{\n.*?^}(\s+?)$`)
-	for _, match := range re.FindAllString(string(c), -1) {
-		if !disableSyntax {
-			quick.Highlight(os.Stdout, match, "go", "terminal256", "monokai")
-		} else {
-			fmt.Println(match)
-		}
+	for _, match := range re.FindAllString(file, -1) {
+		PrintRes(match)
 	}
 }
 
-func ListTypes(file string, disableSyntax bool) {
-	f, _ := os.ReadFile(file)
-	c, _ := format.Source(f)
-	var re = regexp.MustCompile(`(?ms)^( +|\t+)?type\s[A-Za-z0-9_]+.*?\sstruct\s{\n.*?^( +|\t+)?}$`)
-	for _, match := range re.FindAllString(string(c), -1) {
-		if !disableSyntax {
-			quick.Highlight(os.Stdout, match+"\n", "go", "terminal256", "monokai")
-		} else {
-			fmt.Println(match)
-		}
+func ListTypes(file string) {
+	var re = regexp.MustCompile(`(?ms)^( +|\t+)?type\s[A-Za-z0-9_]+\sstruct\s{\n.*?^( +|\t+)?}$`)
+	for _, match := range re.FindAllString(file, -1) {
+		PrintRes(match + "\n")
 	}
 }
 
-func ListMethod(Type, file string, disableSyntax bool) {
-	f, _ := os.ReadFile(file)
-	c, _ := format.Source(f)
+func ListMethod(Type, file string) {
 	var re = regexp.MustCompile(`(?ms)^func (\([A-Za-z0-9_]+ [\*]?` + Type + `\)[ |\t])[A-Za-z0-9_].*?{$`)
-	for _, match := range re.FindAllString(string(c), -1) {
-		if !disableSyntax {
-			quick.Highlight(os.Stdout, match+"}\n", "go", "terminal256", "monokai")
-		} else {
-			fmt.Println(match)
-		}
+	for _, match := range re.FindAllString(file, -1) {
+		PrintRes(match + "}\n")
 	}
 }
 
@@ -83,8 +60,16 @@ func PrintVersion() {
 	os.Exit(1)
 }
 
+func PrintRes(res string) {
+	if !DisableSyntax {
+		quick.Highlight(os.Stdout, res, "go", "terminal256", "monokai")
+	} else {
+		fmt.Printf(res)
+	}
+}
+
 func main() {
-	var syntax, list, listtype bool
+	var list, listtype bool
 	var cat, method string
 	op := optionparser.NewOptionParser()
 	op.Banner = `List or print functions, type, method in go files
@@ -97,7 +82,7 @@ options:`
 	op.On("-p", "--print-function FUNC", "Cat FUNC function", &cat)
 	op.On("-m", "--method TYPE", "List TYPE method", &method)
 	op.On("-t", "--list-types", "List types", &listtype)
-	op.On("-d", "--disable-syntax", "Disable syntax highlighting", &syntax)
+	op.On("-d", "--disable-syntax", "Disable syntax highlighting", &DisableSyntax)
 	op.On("-v", "--version", "Print version and exit", PrintVersion)
 	op.Exemple("List all function in all go files in current directory:")
 	op.Exemple("gcat -l\n")
@@ -112,25 +97,33 @@ options:`
 		os.Exit(1)
 	}
 
-	if len(op.Extra) == 0 || op.Extra[0] == "." || op.Extra[0] == "*" {
+	if len(op.Extra) == 0 || op.Extra[0] == "." {
 		files = GoFiles()
 	} else {
 		files = op.Extra
 	}
 
 	for _, i := range files {
+		f, err := os.ReadFile(i)
+		if err != nil {
+			panic(err)
+		}
+		formated, err := format.Source(f)
+		if err != nil {
+			panic(err)
+		}
 		if len(files) > 1 {
 			fmt.Println(i + ":")
 		}
 		switch {
 		case list:
-			ListFunctions(i, syntax)
+			ListFunctions(string(formated))
 		case cat != "":
-			CatFunction(cat, i, syntax)
+			CatFunction(cat, string(formated))
 		case method != "":
-			ListMethod(method, i, syntax)
+			ListMethod(method, string(formated))
 		case listtype:
-			ListTypes(i, syntax)
+			ListTypes(string(formated))
 		}
 	}
 }
