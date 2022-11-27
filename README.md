@@ -21,6 +21,15 @@ options:
 
 If no files  are passed, check recursivly in current directory  for .go files.
 
+**Note:** For pointer receivers * should be escaped and quoted. It can also be ommited:
+
+```sh
+$ gcat -m '\*Receiver' main.go
+func (r *Receiver) FuncName() string {}
+
+$ gcat -m Receiver main.go
+func (r *Receiver) FuncName() string {}
+```
 
 ### Examples:
 
